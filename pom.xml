@@ -28,7 +28,6 @@
                     <target>${java.version}</target>
                 </configuration>
             </plugin>
-            <!-- Maven Shade Plugin bleibt, falls du künftig eigene Libraries einbauen willst -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -42,7 +41,6 @@
                         <configuration>
                             <artifactSet>
                                 <excludes>
-                                    <!-- Verhindert, dass RangAPI ins Plugin-JAR gepackt wird -->
                                     <exclude>com.github.Samhuwsluz:RangAPI</exclude>
                                 </excludes>
                             </artifactSet>
@@ -85,7 +83,7 @@
             <groupId>com.github.Samhuwsluz</groupId>
             <artifactId>RangAPI</artifactId>
             <version>test-1</version>
-            <scope>provided</scope> <!-- wichtig: NICHT mitschatten -->
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>
