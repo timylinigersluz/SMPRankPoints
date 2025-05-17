@@ -28,6 +28,7 @@
                     <target>${java.version}</target>
                 </configuration>
             </plugin>
+            <!-- Maven Shade Plugin bleibt, falls du künftig eigene Libraries einbauen willst -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -38,6 +39,14 @@
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <artifactSet>
+                                <excludes>
+                                    <!-- Verhindert, dass RangAPI ins Plugin-JAR gepackt wird -->
+                                    <exclude>com.github.Samhuwsluz:RangAPI</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -59,6 +68,10 @@
             <id>sonatype</id>
             <url>https://oss.sonatype.org/content/groups/public/</url>
         </repository>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -67,6 +80,12 @@
             <artifactId>paper-api</artifactId>
             <version>1.21.5-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.Samhuwsluz</groupId>
+            <artifactId>RangAPI</artifactId>
+            <version>test-1</version>
+            <scope>provided</scope> <!-- wichtig: NICHT mitschatten -->
         </dependency>
     </dependencies>
 </project>

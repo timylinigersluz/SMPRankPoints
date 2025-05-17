@@ -4,4 +4,12 @@ main: ch.ksrminecraft.sMPRankPoints.SMPRankPoints
 api-version: '1.21'
 authors: [ Timy Liniger ]
 description: writes rankpoint to global DB
-website: https://ksrminecraft.ch/
+softdepend: [RangAPI]
+commands:
+  apreload:
+    description: Lädt die Config neu
+    permission: smprankpoints.admin
+  points:
+    description: Zeigt Punktestand an
+    permission: smprankpoints.points
+    usage: /points [spieler]
