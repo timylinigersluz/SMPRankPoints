@@ -16,19 +16,37 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Listener-Klasse, die Spieleraktionen überwacht und
+ * basierend auf bestimmten Events Punkte über DBAPI vergibt.
+ */
 public class PlayerActionListener implements Listener {
 
     private final DBAPI dbAPI;
     private final ConfigManager config;
 
+    // Zähler pro Spieler für platzierte bzw. abgebauter Blöcke
     private final Map<UUID, Integer> breakCount = new HashMap<>();
     private final Map<UUID, Integer> placeCount = new HashMap<>();
 
+    /**
+     * Konstruktor.
+     *
+     * @param dbAPI   Zugriff auf die Rangpunkte-Datenbank
+     * @param config  Zugriff auf die Plugin-Konfiguration
+     */
     public PlayerActionListener(DBAPI dbAPI, ConfigManager config) {
         this.dbAPI = dbAPI;
         this.config = config;
     }
 
+    /**
+     * Vergibt Punkte an einen Spieler und gibt optional Debug-Ausgabe in der Konsole aus.
+     *
+     * @param player Der betroffene Spieler
+     * @param points Die zu vergebenden Punkte
+     * @param reason Der Grund (für die Debugausgabe)
+     */
     private void givePoints(Player player, int points, String reason) {
         if (points <= 0) return;
 
@@ -40,6 +58,10 @@ public class PlayerActionListener implements Listener {
         }
     }
 
+    /**
+     * Event: Spieler schließt ein Advancement ab.
+     * Die Punkte für dieses Advancement werden aus der Konfiguration gelesen.
+     */
     @EventHandler
     public void onAdvancement(PlayerAdvancementDoneEvent event) {
         String key = event.getAdvancement().getKey().toString();
@@ -47,6 +69,10 @@ public class PlayerActionListener implements Listener {
         givePoints(event.getPlayer(), points, "Advancement: " + key);
     }
 
+    /**
+     * Event: Spieler baut einen Block ab.
+     * Punkte werden alle X Blöcke vergeben, basierend auf der config.yml.
+     */
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
@@ -62,6 +88,10 @@ public class PlayerActionListener implements Listener {
         }
     }
 
+    /**
+     * Event: Spieler platziert einen Block.
+     * Punkte werden alle X platzierte Blöcke vergeben.
+     */
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
@@ -77,6 +107,10 @@ public class PlayerActionListener implements Listener {
         }
     }
 
+    /**
+     * Event: Enderdrache stirbt.
+     * Es werden nur Spieler in einem Umkreis von 150 Blöcken belohnt.
+     */
     @EventHandler
     public void onEnderDragonDeath(EntityDeathEvent event) {
         if (!(event.getEntity() instanceof EnderDragon)) return;
@@ -85,10 +119,11 @@ public class PlayerActionListener implements Listener {
         Vector dragonLoc = event.getEntity().getLocation().toVector();
 
         for (Player p : event.getEntity().getWorld().getPlayers()) {
+            // Nur Spieler in derselben Welt und in Reichweite erhalten Punkte
             if (!p.getWorld().equals(event.getEntity().getWorld())) continue;
 
             double distance = p.getLocation().toVector().distance(dragonLoc);
-            if (distance <= 150) { // nur Spieler im Radius von 150 Blöcken
+            if (distance <= 150) {
                 givePoints(p, points, "EnderDragon Kill (in Reichweite)");
             }
         }

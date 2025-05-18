@@ -10,24 +10,39 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 
+/**
+ * Verwaltet das Laden und Bereitstellen von Konfigurationen für das Plugin.
+ * Dazu gehören Punkte für Events, Debug-Modus und Advancement-Punkte.
+ */
 public class ConfigManager {
 
     private final FileConfiguration config;
     private FileConfiguration advancementsConfig;
     private boolean debugEnabled;
 
+    // Konfigurationswerte
     private int endBossPoints;
     private int defaultAdvancementPoints;
     private int blockBreakEvery, blockBreakPoints;
     private int blockPlaceEvery, blockPlacePoints;
 
+    /**
+     * Konstruktor lädt die Konfiguration aus der config.yml und advancements.yml.
+     *
+     * @param plugin Instanz des Hauptplugins
+     */
     public ConfigManager(JavaPlugin plugin) {
         this.config = plugin.getConfig();
         loadConfig(plugin);
     }
 
+    /**
+     * Lädt die Konfigurationswerte aus der config.yml und advancements.yml.
+     * Falls advancements.yml nicht existiert, wird sie erstellt.
+     */
     public void loadConfig(JavaPlugin plugin) {
         plugin.saveDefaultConfig();
+
         File advFile = new File(plugin.getDataFolder(), "advancements.yml");
         if (!advFile.exists()) {
             plugin.saveResource("advancements.yml", false);
@@ -44,6 +59,10 @@ public class ConfigManager {
         blockPlacePoints = config.getInt("block-activity.place.points", 0);
     }
 
+    /**
+     * Durchläuft alle existierenden Advancements auf dem Server
+     * und ergänzt die advancements.yml um fehlende Einträge mit dem Standardwert.
+     */
     public void generateAdvancementConfig(JavaPlugin plugin) {
         boolean changed = false;
 
@@ -67,14 +86,21 @@ public class ConfigManager {
         }
     }
 
+    // Getter für die Konfigurationswerte
+
     public boolean isDebug() { return debugEnabled; }
+
     public int getAdvancementPoints(String key) {
         return advancementsConfig.getInt(key, defaultAdvancementPoints);
     }
 
     public int getBlockBreakEvery() { return blockBreakEvery; }
+
     public int getBlockBreakPoints() { return blockBreakPoints; }
+
     public int getBlockPlaceEvery() { return blockPlaceEvery; }
+
     public int getBlockPlacePoints() { return blockPlacePoints; }
+
     public int getEndBossPoints() { return endBossPoints; }
 }

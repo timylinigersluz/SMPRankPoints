@@ -16,11 +16,15 @@ import java.util.Objects;
 public class SMPRankPoints extends JavaPlugin {
 
     private ConfigManager configManager;
+
+    // Globale Referenz auf die Plugininstanz
     public static SMPRankPoints instance;
 
     @Override
     public void onEnable() {
         instance = this;
+
+        // Konfigurationen laden
         saveDefaultConfig();
         configManager = new ConfigManager(this);
         configManager.generateAdvancementConfig(this);
@@ -28,19 +32,24 @@ public class SMPRankPoints extends JavaPlugin {
         RangAPI rangAPI;
         DBAPI dbAPI;
 
+        // RangAPI suchen und laden
         if (getServer().getPluginManager().getPlugin("RangAPI") instanceof RangAPI api) {
             rangAPI = api;
-            dbAPI = rangAPI.dbAPI; // Zugriff auf das DBAPI-Objekt aus dem RangAPI-Plugin
+            dbAPI = rangAPI.dbAPI; // Zugriff auf RangAPI-Datenbankzugriff
         } else {
             getLogger().severe("RangAPI nicht gefunden!");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
+        // Events und Befehle registrieren
         Bukkit.getPluginManager().registerEvents(new PlayerActionListener(dbAPI, configManager), this);
         Objects.requireNonNull(getCommand("points")).setExecutor(new PointsCommand(dbAPI));
     }
 
+    /**
+     * Befehl /apreload – lädt Konfigurationsdateien neu.
+     */
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, String label, @NotNull String[] args) {
         if (label.equalsIgnoreCase("apreload")) {
