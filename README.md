@@ -3,6 +3,7 @@
 A Minecraft Paper plugin for automatically awarding global rank points for specific actions like block breaking, placing, completing advancements, and killing the Ender Dragon.  
 Points are written directly to the global rank database using the [RangAPI](https://github.com/samhuwsluz/RangAPI) plugin.
 
+> 🇩🇪 [Deutsche Version hier verfügbar](README_de.md)
 ---
 
 ## 🔧 Requirements
