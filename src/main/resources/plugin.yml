@@ -2,8 +2,8 @@ name: SMPRankPoints
 version: '1.0-SNAPSHOT'
 main: ch.ksrminecraft.sMPRankPoints.SMPRankPoints
 api-version: '1.21'
-authors: [ Timy Liniger ]
-description: writes rankpoint to global DB
+authors: [ksrminecaft-tecs]
+description: writes rankpoints to global DB
 softdepend: [RangAPI]
 commands:
   apreload:

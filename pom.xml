@@ -39,11 +39,13 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <artifactSet>
-                                <excludes>
-                                    <exclude>com.github.Samhuwsluz:RangAPI</exclude>
-                                </excludes>
-                            </artifactSet>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <relocations>
+                                <relocation>
+                                    <pattern>ch.ksrminecraft.RankPointsAPI</pattern>
+                                    <shadedPattern>ch.ksrminecraft.shaded.rankpointsapi</shadedPattern>
+                                </relocation>
+                            </relocations>
                         </configuration>
                     </execution>
                 </executions>
@@ -73,17 +75,19 @@
     </repositories>
 
     <dependencies>
+        <!-- Paper API -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
             <version>1.21.5-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- RankPointsAPI via JitPack -->
         <dependency>
-            <groupId>com.github.Samhuwsluz</groupId>
-            <artifactId>RangAPI</artifactId>
-            <version>test-1</version>
-            <scope>provided</scope>
+            <groupId>com.github.samhuwsluz</groupId>
+            <artifactId>RankPointsAPI</artifactId>
+            <version>v0.1.2</version>
         </dependency>
     </dependencies>
 </project>

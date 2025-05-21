@@ -1,7 +1,6 @@
 package ch.ksrminecraft.sMPRankPoints;
 
-import ch.ksrminecraft.rangAPI.DBAPI;
-import ch.ksrminecraft.rangAPI.RangAPI;
+import ch.ksrminecraft.RankPointsAPI.PointsAPI;
 import ch.ksrminecraft.sMPRankPoints.commands.PointsCommand;
 import ch.ksrminecraft.sMPRankPoints.listeners.PlayerActionListener;
 import ch.ksrminecraft.sMPRankPoints.utils.ConfigManager;
@@ -12,10 +11,13 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
+import java.util.logging.Logger;
 
 public class SMPRankPoints extends JavaPlugin {
 
     private ConfigManager configManager;
+    private PointsAPI pointsAPI;
+    private Logger logger;
 
     // Globale Referenz auf die Plugininstanz
     public static SMPRankPoints instance;
@@ -23,28 +25,36 @@ public class SMPRankPoints extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+        this.logger = getLogger();
 
         // Konfigurationen laden
         saveDefaultConfig();
         configManager = new ConfigManager(this);
         configManager.generateAdvancementConfig(this);
 
-        RangAPI rangAPI;
-        DBAPI dbAPI;
+        // RankPointsAPI initialisieren
+        String url = getConfig().getString("mysql.host");
+        String user = getConfig().getString("mysql.user");
+        String pass = getConfig().getString("mysql.password");
+        boolean debug = getConfig().getBoolean("debug", false);
 
-        // RangAPI suchen und laden
-        if (getServer().getPluginManager().getPlugin("RangAPI") instanceof RangAPI api) {
-            rangAPI = api;
-            dbAPI = rangAPI.dbAPI; // Zugriff auf RangAPI-Datenbankzugriff
-        } else {
-            getLogger().severe("RangAPI nicht gefunden!");
+        if (url == null || user == null || pass == null) {
+            logger.severe("MySQL-Zugangsdaten fehlen in der config.yml!");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
+        try {
+            this.pointsAPI = new PointsAPI(url, user, pass, logger, debug);
+        } catch (Exception e) {
+            logger.severe("Fehler beim Initialisieren der RankPointsAPI: " + e.getMessage());
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
         // Events und Befehle registrieren
-        Bukkit.getPluginManager().registerEvents(new PlayerActionListener(dbAPI, configManager), this);
-        Objects.requireNonNull(getCommand("points")).setExecutor(new PointsCommand(dbAPI));
+        Bukkit.getPluginManager().registerEvents(new PlayerActionListener(pointsAPI, configManager), this);
+        Objects.requireNonNull(getCommand("points")).setExecutor(new PointsCommand(pointsAPI));
     }
 
     /**
@@ -60,5 +70,9 @@ public class SMPRankPoints extends JavaPlugin {
             return true;
         }
         return false;
+    }
+
+    public PointsAPI getPointsAPI() {
+        return pointsAPI;
     }
 }
