@@ -37,11 +37,17 @@ public class PlayerActionListener implements Listener {
         if (points <= 0) return;
 
         UUID uuid = player.getUniqueId();
-        pointsAPI.addPoints(uuid, points);
-        int total = pointsAPI.getPoints(uuid);
+        boolean success = pointsAPI.addPoints(uuid, points);
 
-        if (config.isDebug()) {
-            System.out.println("[SMPRankPoints] " + player.getName() + " erhielt " + points + " Punkte für " + reason + " (Gesamt: " + total + ")");
+        if (success) {
+            int total = pointsAPI.getPoints(uuid);
+            if (config.isDebug()) {
+                System.out.println("[SMPRankPoints] " + player.getName() + " erhielt " + points + " Punkte für " + reason + " (Gesamt: " + total + ")");
+            }
+        } else {
+            if (config.isDebug()) {
+                System.out.println("[SMPRankPoints] Keine Punkte für " + player.getName() + " – vermutlich staff");
+            }
         }
     }
 
