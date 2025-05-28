@@ -2,6 +2,7 @@ package ch.ksrminecraft.sMPRankPoints;
 
 import ch.ksrminecraft.RankPointsAPI.PointsAPI;
 import ch.ksrminecraft.sMPRankPoints.commands.PointsCommand;
+import ch.ksrminecraft.sMPRankPoints.commands.ResetAdvancementsCommand;
 import ch.ksrminecraft.sMPRankPoints.listeners.PlayerActionListener;
 import ch.ksrminecraft.sMPRankPoints.utils.ConfigManager;
 import org.bukkit.Bukkit;
@@ -54,6 +55,7 @@ public class SMPRankPoints extends JavaPlugin {
 
         // Events und Befehle registrieren
         Bukkit.getPluginManager().registerEvents(new PlayerActionListener(pointsAPI, configManager), this);
+        getCommand("resetadvancements").setExecutor(new ResetAdvancementsCommand());
         Objects.requireNonNull(getCommand("points")).setExecutor(new PointsCommand(pointsAPI));
     }
 

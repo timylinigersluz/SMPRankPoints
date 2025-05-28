@@ -2,6 +2,7 @@ package ch.ksrminecraft.sMPRankPoints.listeners;
 
 import ch.ksrminecraft.RankPointsAPI.PointsAPI;
 import ch.ksrminecraft.sMPRankPoints.utils.ConfigManager;
+import org.bukkit.Material;
 import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,17 +17,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Listener-Klasse, die Spieleraktionen überwacht und
- * basierend auf bestimmten Events Punkte über PointsAPI vergibt.
- */
 public class PlayerActionListener implements Listener {
 
     private final PointsAPI pointsAPI;
     private final ConfigManager config;
 
-    private final Map<UUID, Integer> breakCount = new HashMap<>();
-    private final Map<UUID, Integer> placeCount = new HashMap<>();
+    private final Map<UUID, Long> lastBreakTimestamps = new HashMap<>();
+    private final Map<UUID, Double> blockBreakBuffer = new HashMap<>();
+    private final Map<UUID, Double> blockPlaceBuffer = new HashMap<>();
 
     public PlayerActionListener(PointsAPI pointsAPI, ConfigManager config) {
         this.pointsAPI = pointsAPI;
@@ -39,37 +37,44 @@ public class PlayerActionListener implements Listener {
         UUID uuid = player.getUniqueId();
         boolean success = pointsAPI.addPoints(uuid, points);
 
-        if (success) {
+        if (success && config.isDebug()) {
             int total = pointsAPI.getPoints(uuid);
-            if (config.isDebug()) {
-                System.out.println("[SMPRankPoints] " + player.getName() + " erhielt " + points + " Punkte für " + reason + " (Gesamt: " + total + ")");
-            }
-        } else {
-            if (config.isDebug()) {
-                System.out.println("[SMPRankPoints] Keine Punkte für " + player.getName() + " – vermutlich staff");
-            }
+            System.out.println("[SMPRankPoints] " + player.getName() + " received " + points + " points for " + reason + " (Total: " + total + ")");
+        } else if (!success && config.isDebug()) {
+            System.out.println("[SMPRankPoints] No points awarded to " + player.getName() + " – possibly staff");
         }
-    }
-
-    @EventHandler
-    public void onAdvancement(PlayerAdvancementDoneEvent event) {
-        String key = event.getAdvancement().getKey().toString();
-        int points = config.getAdvancementPoints(key);
-        givePoints(event.getPlayer(), points, "Advancement: " + key);
     }
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
-        int count = breakCount.getOrDefault(uuid, 0) + 1;
-        breakCount.put(uuid, count);
+        Material blockType = event.getBlock().getType();
 
-        int every = config.getBlockBreakEvery();
-        int reward = config.getBlockBreakPoints();
+        long now = System.currentTimeMillis();
+        long lastBreak = lastBreakTimestamps.getOrDefault(uuid, 0L);
+        lastBreakTimestamps.put(uuid, now);
 
-        if (every > 0 && count % every == 0) {
-            givePoints(player, reward, "BlockBreak: " + count + " Blöcke");
+        double minutesElapsed = (now - lastBreak) / 60000.0;
+        double fatigueDecay = config.getFatigueDecay();
+        double fatigueFactor = Math.max(0.05, 1.0 - fatigueDecay * minutesElapsed);
+
+        double basePoints = config.getBlockBreakPoints();
+        double hardnessMultiplier = config.getHardnessMultiplier(blockType);
+        double gained = basePoints * fatigueFactor * hardnessMultiplier;
+
+        double buffered = blockBreakBuffer.getOrDefault(uuid, 0.0);
+        double total = buffered + gained;
+        int toAward = (int) total;
+        double newBuffer = total - toAward;
+        blockBreakBuffer.put(uuid, newBuffer);
+
+        if (toAward > 0 && config.isDebug()) {
+            System.out.println("[SMPRankPoints] " + player.getName() + " + " + toAward + " point(s) for breaking " + blockType);
+        }
+
+        if (toAward > 0) {
+            givePoints(player, toAward, "BlockBreak: " + blockType);
         }
     }
 
@@ -77,14 +82,22 @@ public class PlayerActionListener implements Listener {
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
-        int count = placeCount.getOrDefault(uuid, 0) + 1;
-        placeCount.put(uuid, count);
+        Material blockType = event.getBlock().getType();
 
-        int every = config.getBlockPlaceEvery();
-        int reward = config.getBlockPlacePoints();
+        double basePoints = config.getBlockPlacePoints();
+        double hardnessMultiplier = config.getHardnessMultiplier(blockType);
+        double gainedPoints = basePoints * hardnessMultiplier;
 
-        if (every > 0 && count % every == 0) {
-            givePoints(player, reward, "BlockPlace: " + count + " Blöcke");
+        double total = blockPlaceBuffer.getOrDefault(uuid, 0.0) + gainedPoints;
+        int toAward = (int) total;
+        blockPlaceBuffer.put(uuid, total - toAward);
+
+        if (toAward > 0 && config.isDebug()) {
+            System.out.println("[SMPRankPoints] " + player.getName() + " + " + toAward + " point(s) for placing " + blockType);
+        }
+
+        if (toAward > 0) {
+            givePoints(player, toAward, "BlockPlace: " + blockType);
         }
     }
 
@@ -100,8 +113,32 @@ public class PlayerActionListener implements Listener {
 
             double distance = p.getLocation().toVector().distance(dragonLoc);
             if (distance <= 150) {
-                givePoints(p, points, "EnderDragon Kill (in Reichweite)");
+                givePoints(p, points, "EnderDragon kill (in range)");
             }
         }
     }
+
+    @EventHandler
+    public void onAdvancementDone(PlayerAdvancementDoneEvent event) {
+        Player player = event.getPlayer();
+        String key = event.getAdvancement().getKey().toString();
+        int points = config.getAdvancementPoints(key);
+
+        if (points > 0) {
+            boolean success = pointsAPI.addPoints(player.getUniqueId(), points);
+            if (success) {
+                int total = pointsAPI.getPoints(player.getUniqueId());
+                if (config.isDebug()) {
+                    System.out.println("[SMPRankPoints] " + player.getName() +
+                            " earned " + points + " points for Advancement '" + key + "' (Total: " + total + ")");
+                }
+            } else if (config.isDebug()) {
+                System.out.println("[SMPRankPoints] No points awarded for Advancement '" + key +
+                        "' – possibly staff (" + player.getName() + ")");
+            }
+        } else if (config.isDebug()) {
+            System.out.println("[SMPRankPoints] Advancement '" + key + "' gives 0 points → Ignored (" + player.getName() + ")");
+        }
+    }
+
 }

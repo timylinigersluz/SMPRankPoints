@@ -13,3 +13,7 @@ commands:
     description: Zeigt Punktestand an
     permission: smprankpoints.points
     usage: /points [spieler]
+  resetadvancements:
+    description: Reset all advancements for a player
+    usage: /resetadvancements <player>
+    permission: smprankpoints.resetadvancements
