@@ -24,7 +24,9 @@ public class PlayerActionListener implements Listener {
 
     private final Map<UUID, Long> lastBreakTimestamps = new HashMap<>();
     private final Map<UUID, Double> blockBreakBuffer = new HashMap<>();
+    private final Map<UUID, Integer> blockBreakCount = new HashMap<>();
     private final Map<UUID, Double> blockPlaceBuffer = new HashMap<>();
+    private final Map<UUID, Integer> blockPlaceCount = new HashMap<>();
 
     public PlayerActionListener(PointsAPI pointsAPI, ConfigManager config) {
         this.pointsAPI = pointsAPI;
@@ -45,6 +47,20 @@ public class PlayerActionListener implements Listener {
         }
     }
 
+    private int getDynamicBlockThreshold(int count) {
+        return 10 + (int) Math.pow(count / 20.0, 2); // quadratic scaling
+    }
+
+    private void debugProgress(UUID uuid, Player player, double buffered, int threshold, String action) {
+        int barLength = 10;
+        double progress = Math.min(1.0, buffered / threshold);
+        int filled = (int) (barLength * progress);
+        String bar = "▓".repeat(filled) + "░".repeat(barLength - filled);
+        double percent = 100.0 * progress;
+        System.out.printf("[SMPRankPoints] [Debug] %s → %s progress: (%.0f / %d) %s %.0f%%%n",
+                player.getName(), action, buffered, threshold, bar, percent);
+    }
+
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
@@ -59,22 +75,26 @@ public class PlayerActionListener implements Listener {
         double fatigueDecay = config.getFatigueDecay();
         double fatigueFactor = Math.max(0.05, 1.0 - fatigueDecay * minutesElapsed);
 
-        double basePoints = config.getBlockBreakPoints();
         double hardnessMultiplier = config.getHardnessMultiplier(blockType);
-        double gained = basePoints * fatigueFactor * hardnessMultiplier;
+
+        int count = blockBreakCount.getOrDefault(uuid, 0);
+        int threshold = getDynamicBlockThreshold(count);
+        count++;
+        blockBreakCount.put(uuid, count);
 
         double buffered = blockBreakBuffer.getOrDefault(uuid, 0.0);
-        double total = buffered + gained;
-        int toAward = (int) total;
-        double newBuffer = total - toAward;
-        blockBreakBuffer.put(uuid, newBuffer);
+        buffered += fatigueFactor * hardnessMultiplier;
 
-        if (toAward > 0 && config.isDebug()) {
-            System.out.println("[SMPRankPoints] " + player.getName() + " + " + toAward + " point(s) for breaking " + blockType);
+        if (buffered >= threshold) {
+            givePoints(player, 1, "BlockBreak (" + count + " blocks, threshold: " + threshold + ")");
+            blockBreakBuffer.put(uuid, 0.0);
+            blockBreakCount.put(uuid, 0);
+        } else {
+            blockBreakBuffer.put(uuid, buffered);
         }
 
-        if (toAward > 0) {
-            givePoints(player, toAward, "BlockBreak: " + blockType);
+        if (config.isDebug()) {
+            debugProgress(uuid, player, buffered, threshold, "BlockBreak");
         }
     }
 
@@ -82,22 +102,25 @@ public class PlayerActionListener implements Listener {
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
-        Material blockType = event.getBlock().getType();
 
-        double basePoints = config.getBlockPlacePoints();
-        double hardnessMultiplier = config.getHardnessMultiplier(blockType);
-        double gainedPoints = basePoints * hardnessMultiplier;
+        int count = blockPlaceCount.getOrDefault(uuid, 0);
+        int threshold = getDynamicBlockThreshold(count);
+        count++;
+        blockPlaceCount.put(uuid, count);
 
-        double total = blockPlaceBuffer.getOrDefault(uuid, 0.0) + gainedPoints;
-        int toAward = (int) total;
-        blockPlaceBuffer.put(uuid, total - toAward);
+        double buffered = blockPlaceBuffer.getOrDefault(uuid, 0.0);
+        buffered += 1.0;
 
-        if (toAward > 0 && config.isDebug()) {
-            System.out.println("[SMPRankPoints] " + player.getName() + " + " + toAward + " point(s) for placing " + blockType);
+        if (buffered >= threshold) {
+            givePoints(player, 1, "BlockPlace (" + count + " blocks, threshold: " + threshold + ")");
+            blockPlaceBuffer.put(uuid, 0.0);
+            blockPlaceCount.put(uuid, 0);
+        } else {
+            blockPlaceBuffer.put(uuid, buffered);
         }
 
-        if (toAward > 0) {
-            givePoints(player, toAward, "BlockPlace: " + blockType);
+        if (config.isDebug()) {
+            debugProgress(uuid, player, buffered, threshold, "BlockPlace");
         }
     }
 
@@ -140,5 +163,4 @@ public class PlayerActionListener implements Listener {
             System.out.println("[SMPRankPoints] Advancement '" + key + "' gives 0 points → Ignored (" + player.getName() + ")");
         }
     }
-
 }
