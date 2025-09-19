@@ -11,150 +11,131 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
-/**
- * Manages all configuration files and related settings.
- * Loads and processes: config.yml, advancements.yml, hardness.yml
- */
 public class ConfigManager {
 
+    private final JavaPlugin plugin;
     private final FileConfiguration config;
+    private final LogHelper logger;
     private FileConfiguration advancementsConfig;
     private FileConfiguration hardnessConfig;
 
-    private final JavaPlugin plugin;
-
-    private boolean debugEnabled;
-
     private int endBossPoints;
     private int defaultAdvancementPoints;
-    private int blockBreakEvery, blockBreakPoints;
-    private int blockPlaceEvery, blockPlacePoints;
-
-    // Hardness class mappings and multipliers from hardness.yml
     private final Map<String, Set<String>> hardnessClasses = new HashMap<>();
     private final Map<String, Double> multipliers = new HashMap<>();
 
     public ConfigManager(JavaPlugin plugin) {
         this.plugin = plugin;
+        plugin.saveDefaultConfig();
         this.config = plugin.getConfig();
+
+        // Logger von der Hauptklasse übernehmen
+        this.logger = ((ch.ksrminecraft.sMPRankPoints.SMPRankPoints) plugin).getLoggerHelper();
+
         loadConfig(plugin);
     }
 
-    /**
-     * Loads or reloads all config files and initializes values.
-     */
     public void loadConfig(JavaPlugin plugin) {
-        plugin.saveDefaultConfig();
-
-        // Load advancements.yml
+        // advancements.yml laden oder aus Ressourcen extrahieren
         File advFile = new File(plugin.getDataFolder(), "advancements.yml");
         if (!advFile.exists()) {
             plugin.saveResource("advancements.yml", false);
+            logger.info("advancements.yml aus Ressourcen erstellt.");
         }
         advancementsConfig = YamlConfiguration.loadConfiguration(advFile);
 
-        // Load hardness.yml
+        // hardness.yml laden oder aus Ressourcen extrahieren
         File hardnessFile = new File(plugin.getDataFolder(), "hardness.yml");
         if (!hardnessFile.exists()) {
             plugin.saveResource("hardness.yml", false);
+            logger.info("hardness.yml aus Ressourcen erstellt.");
         }
         hardnessConfig = YamlConfiguration.loadConfiguration(hardnessFile);
         loadHardnessConfig();
 
-        // Load general values
-        debugEnabled = config.getBoolean("debug", false);
+        // allgemeine Werte
         endBossPoints = config.getInt("points.endboss-kill.ender_dragon", 0);
         defaultAdvancementPoints = config.getInt("defaults.advancement-points", 0);
-
-        blockBreakEvery = config.getInt("block-activity.break.every", 0);
-        blockBreakPoints = config.getInt("block-activity.break.points", 0);
-        blockPlaceEvery = config.getInt("block-activity.place.every", 0);
-        blockPlacePoints = config.getInt("block-activity.place.points", 0);
 
         generateAdvancementConfig(plugin);
     }
 
-    /**
-     * Parses hardness.yml and builds multiplier mappings.
-     */
     private void loadHardnessConfig() {
         hardnessClasses.clear();
         multipliers.clear();
 
         if (hardnessConfig.contains("multipliers")) {
-            for (String key : hardnessConfig.getConfigurationSection("multipliers").getKeys(false)) {
+            for (String key : Objects.requireNonNull(hardnessConfig.getConfigurationSection("multipliers")).getKeys(false)) {
                 double val = hardnessConfig.getDouble("multipliers." + key);
                 multipliers.put(key.toUpperCase(), val);
             }
         }
 
         if (hardnessConfig.contains("blocks")) {
-            for (String key : hardnessConfig.getConfigurationSection("blocks").getKeys(false)) {
+            for (String key : Objects.requireNonNull(hardnessConfig.getConfigurationSection("blocks")).getKeys(false)) {
                 List<String> blocks = hardnessConfig.getStringList("blocks." + key);
                 hardnessClasses.put(key.toUpperCase(), new HashSet<>(blocks));
             }
         }
 
-        if (debugEnabled) {
-            plugin.getLogger().info("[Hardness] Loaded multipliers: " + multipliers);
-            plugin.getLogger().info("[Hardness] Loaded classes: " + hardnessClasses.keySet());
+        if (isDebug()) {
+            logger.debug("[Hardness] Loaded multipliers: {}", multipliers);
+            logger.debug("[Hardness] Loaded classes: {}", hardnessClasses.keySet());
         }
     }
 
-    /**
-     * Returns multiplier for a given block type based on its hardness class.
-     */
     public double getHardnessMultiplier(Material material) {
         String matName = material.toString();
         for (Map.Entry<String, Set<String>> entry : hardnessClasses.entrySet()) {
             if (entry.getValue().contains(matName)) {
                 double multiplier = multipliers.getOrDefault(entry.getKey(), 1.0);
-                if (debugEnabled) {
-                    plugin.getLogger().info("[Hardness] " + matName + " → Class: " + entry.getKey() + " → Multiplier: " + multiplier);
+                if (isDebug()) {
+                    logger.debug("[Hardness] {} → Class: {} → Multiplier: {}", matName, entry.getKey(), multiplier);
                 }
                 return multiplier;
             }
         }
-        if (debugEnabled) {
-            plugin.getLogger().info("[Hardness] " + matName + " → No class found, using 1.0");
+        if (isDebug()) {
+            logger.debug("[Hardness] {} → No class found, using 1.0", matName);
         }
         return 1.0;
     }
 
-    /**
-     * Returns advancement points from advancements.yml or default.
-     */
     public int getAdvancementPoints(String key) {
         return advancementsConfig.getInt(key, defaultAdvancementPoints);
     }
 
-    public int getBlockBreakEvery() { return blockBreakEvery; }
-
-    public int getBlockBreakPoints() { return blockBreakPoints; }
-
-    public int getBlockPlaceEvery() { return blockPlaceEvery; }
-
-    public int getBlockPlacePoints() { return blockPlacePoints; }
-
-    public int getEndBossPoints() { return endBossPoints; }
-
-    public boolean isDebug() { return debugEnabled; }
-
-    /**
-     * Utility method for accessing nested config values.
-     * Example: getConfigSectionValue("block-activity.break.fatigue-decay-per-minute")
-     */
-    public double getConfigSectionValue(String path, double defaultValue) {
-        return config.getDouble(path, defaultValue);
+    public int getBaseThreshold(String type) {
+        return config.getInt("block-activity." + type + ".every", 10);
     }
 
-    /**
-     * Generates missing entries in advancements.yml for all registered advancements.
-     */
+    public double getFatigueGain(String type) {
+        return config.getDouble("block-activity." + type + ".fatigue.gain-per-action", 0.05);
+    }
+
+    public double getFatigueDecay(String type) {
+        return config.getDouble("block-activity." + type + ".fatigue.decay-per-minute", 1.0);
+    }
+
+    public int getEndBossPoints() {
+        return endBossPoints;
+    }
+
+    public boolean isDebug() {
+        return plugin.getConfig().getBoolean("debug", false);
+    }
+
     public void generateAdvancementConfig(JavaPlugin plugin) {
         boolean changed = false;
 
-        // Entferne unerwünschte Einträge (Rezepte)
+        int count = 0;
+        Iterator<Advancement> itCheck = Bukkit.getServer().advancementIterator();
+        while (itCheck.hasNext()) {
+            count++;
+            itCheck.next();
+        }
+        logger.info("[SMPRankPoints] Anzahl erkannter Advancements: {}", count);
+
         Set<String> existingKeys = new HashSet<>(advancementsConfig.getKeys(false));
         for (String key : existingKeys) {
             if (key.startsWith("minecraft:recipes/")) {
@@ -163,7 +144,6 @@ public class ConfigManager {
             }
         }
 
-        // Füge neue Advancements hinzu (ohne Rezepte)
         Iterator<Advancement> it = Bukkit.getServer().advancementIterator();
         while (it.hasNext()) {
             Advancement advancement = it.next();
@@ -177,18 +157,17 @@ public class ConfigManager {
             }
         }
 
-        // Speichern falls nötig
         if (changed) {
             try {
                 advancementsConfig.save(new File(plugin.getDataFolder(), "advancements.yml"));
-                plugin.getLogger().info("Advancement configuration updated (recipes excluded, defaults applied).");
+                logger.info("Advancement configuration updated (recipes excluded, defaults applied).");
             } catch (IOException e) {
-                plugin.getLogger().warning("Error saving advancements.yml: " + e.getMessage());
+                logger.error("Error saving advancements.yml: {}", e.getMessage());
             }
         }
     }
 
-    public double getFatigueDecay() {
-        return config.getDouble("block-activity.break.fatigue-decay-per-minute", 0.2);
+    public boolean isStaffPointsEnabled() {
+        return plugin.getConfig().getBoolean("staff.give-points", false);
     }
 }

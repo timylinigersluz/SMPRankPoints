@@ -1,0 +1,55 @@
+# =========================================================
+# Konfiguration für SMPRankPoints
+# Punktevergabe für Advancements, Blockabbau/-platzieren und Endboss-Kills
+# =========================================================
+
+# Debug-Ausgaben für Detail-Logs (z. B. Punktevergabe, Fatigue-Berechnung)
+debug: true
+
+# Logging-Einstellungen
+log:
+  level: INFO         # Mögliche Werte: ERROR, WARN, INFO, DEBUG, TRACE
+
+# MySQL-Verbindung (wird an RankPointsAPI übergeben)
+mysql:
+  host: "your-host.com:3306/database"
+  user: "your_mysql_user"
+  password: "your_mysql_password"
+
+# Punktesystem für Block-Aktivitäten
+block-activity:
+  break:
+    # Anzahl Blöcke, die (ohne Ermüdung) für 1 Punkt nötig sind
+    every: 10
+
+    fatigue:
+      # Ermüdung pro Blockabbau (höher = schnellerer Anstieg der Anforderung)
+      gain-per-action: 0.05
+
+      # Abbau der Ermüdung pro Minute Inaktivität
+      decay-per-minute: 1.0
+
+  place:
+    # Anzahl platzierter Blöcke (ohne Ermüdung) für 1 Punkt
+    every: 5
+
+    fatigue:
+      # Ermüdung pro Blockplatzierung
+      gain-per-action: 0.05
+      decay-per-minute: 1.0
+
+# Punkte für spezielle Events
+points:
+  endboss-kill:
+    # Punkte für Spieler in Reichweite beim Tod des Enderdrachens
+    ender_dragon: 10
+
+# Standardpunkte für Advancements
+defaults:
+  advancement-points: 1
+
+# Staff-Konfiguration
+staff:
+  # true  = Staff bekommt Punkte
+  # false = Staff wird von Punktevergabe ausgeschlossen (über RankPointsAPI)
+  give-points: true

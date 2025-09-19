@@ -6,7 +6,7 @@
 
     <groupId>ch.ksrminecraft</groupId>
     <artifactId>SMPRankPoints</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1</version>
     <packaging>jar</packaging>
 
     <name>SMPRankPoints</name>
@@ -17,7 +17,17 @@
     </properties>
 
     <build>
+        <!-- Ergebnis-Dateiname: SMPRankPoints-1.0-SNAPSHOT.jar -->
+        <finalName>${project.artifactId}-${project.version}</finalName>
         <defaultGoal>clean package</defaultGoal>
+
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -28,6 +38,7 @@
                     <target>${java.version}</target>
                 </configuration>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -35,28 +46,38 @@
                 <executions>
                     <execution>
                         <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
+                        <goals><goal>shade</goal></goals>
                         <configuration>
+                            <!-- Nur das shaded JAR als Hauptartefakt (kein -shaded.jar anheften) -->
+                            <shadedArtifactAttached>false</shadedArtifactAttached>
+                            <!-- explizit: Zieldatei = normales Artefakt -->
+                            <outputFile>${project.build.directory}/${project.build.finalName}.jar</outputFile>
+
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+
                             <relocations>
                                 <relocation>
                                     <pattern>ch.ksrminecraft.RankPointsAPI</pattern>
                                     <shadedPattern>ch.ksrminecraft.shaded.rankpointsapi</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>com.mysql.cj</pattern>
+                                    <shadedPattern>ch.ksrminecraft.shaded.mysql.cj</shadedPattern>
+                                </relocation>
                             </relocations>
+
+                            <!-- JDBC-Services mergen, damit der Treiber automatisch geladen wird -->
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+
+                            <!-- optional: kleineres JAR; bei Problemen einfach entfernen -->
+                            <!-- <minimizeJar>true</minimizeJar> -->
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-            </resource>
-        </resources>
     </build>
 
     <repositories>
@@ -79,15 +100,16 @@
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>1.21.5-R0.1-SNAPSHOT</version>
+            <version>1.21.8-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
 
-        <!-- RankPointsAPI via JitPack -->
+        <!-- RankPointsAPI via JitPack (wird geschaded/relocated) -->
         <dependency>
-            <groupId>com.github.samhuwsluz</groupId>
+            <groupId>com.github.timylinigersluz</groupId>
             <artifactId>RankPointsAPI</artifactId>
-            <version>v0.1.3</version>
+            <version>v0.0.3</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>

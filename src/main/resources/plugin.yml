@@ -1,19 +1,17 @@
 name: SMPRankPoints
-version: '1.0-SNAPSHOT'
+version: '1.1'
 main: ch.ksrminecraft.sMPRankPoints.SMPRankPoints
 api-version: '1.21'
-authors: [ksrminecaft-tecs]
-description: writes rankpoints to global DB
-softdepend: [RangAPI]
+authors: [ksrminecraft-tecs]
+description: Vergibt automatisch globale Rangpunkte für Aktionen im SMP
+
 commands:
-  apreload:
-    description: Lädt die Config neu
+  srpreload:
+    description: Lädt die Konfiguration des Plugins neu
+    usage: /srpreload
     permission: smprankpoints.admin
-  points:
-    description: Zeigt Punktestand an
-    permission: smprankpoints.points
-    usage: /points [spieler]
+
   resetadvancements:
-    description: Reset all advancements for a player
-    usage: /resetadvancements <player>
+    description: Setzt alle Advancements eines Spielers zurück
+    usage: /resetadvancements <Spieler>
     permission: smprankpoints.resetadvancements

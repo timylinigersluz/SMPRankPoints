@@ -1,5 +1,6 @@
 package ch.ksrminecraft.sMPRankPoints.commands;
 
+import ch.ksrminecraft.sMPRankPoints.SMPRankPoints;
 import org.bukkit.Bukkit;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.command.Command;
@@ -14,18 +15,18 @@ public class ResetAdvancementsCommand implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.isOp()) {
-            sender.sendMessage("§cYou don't have permission to use this command.");
+            sender.sendMessage("§cDu hast keine Berechtigung für diesen Befehl.");
             return true;
         }
 
         if (args.length != 1) {
-            sender.sendMessage("§cUsage: /resetadvancements <player>");
+            sender.sendMessage("§cVerwendung: /resetadvancements <Spieler>");
             return true;
         }
 
         Player target = Bukkit.getPlayerExact(args[0]);
         if (target == null || !target.isOnline()) {
-            sender.sendMessage("§cPlayer not found or offline.");
+            sender.sendMessage("§cSpieler nicht gefunden oder offline.");
             return true;
         }
 
@@ -39,8 +40,15 @@ public class ResetAdvancementsCommand implements CommandExecutor {
             count++;
         }
 
-        sender.sendMessage("§aAll advancements reset for §e" + target.getName() + "§a (" + count + " total).");
-        target.sendMessage("§cYour advancements have been reset by an administrator.");
+        sender.sendMessage("§aAlle Advancements von §e" + target.getName() + " §awurden zurückgesetzt (§e" + count + "§a insgesamt).");
+        target.sendMessage("§cDeine Advancements wurden von einem Administrator zurückgesetzt.");
+
+        // Log-Ausgabe über LogHelper (englisch)
+        SMPRankPoints.instance.getLoggerHelper()
+                .info("Advancements of player {} were reset by {} ({} total).",
+                        target.getName(),
+                        sender.getName(),
+                        count);
 
         return true;
     }
